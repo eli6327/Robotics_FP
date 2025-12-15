@@ -12,18 +12,23 @@ SelfDrive::SelfDrive() : rclcpp::Node("self_drive_node") // 노드 이름 설정
 
 void SelfDrive::subscribe_scan(const sensor_msgs::msg::LaserScan::SharedPtr scan)
 {
-    float front = get_range_avg(scan, 0, 15);
-    float f_left = get_range_avg(scan, 45, 15);
-    float f_right = get_range_avg(scan, 315, 15);
-    geometry_msgs::msg::Twist vel;
+  float front = get_range_avg(scan, 0, 15);
+  float f_left = get_range_avg(scan, 45, 15);
+  float f_right = get_range_avg(scan, 315, 15);
+  geometry_msgs::msg::Twist vel;
 
-    if (front < STOP_DISTANCE) {
-      vel.linear.x = 0.0;
-      if (f_left > f_right) vel.angular.z = 1.0;
-      else vel.angular.z = -1.0;
-    }
-
-    pose_pub_->publish(vel);
+  if (front < STOP_DISTANCE) {
+    vel.linear.x = 0.0;
+    if (f_left > f_right) vel.angular.z = 1.0;
+    else vel.angular.z = -1.0;
+  }
+  else {
+    vel.linear.x = TARGET_SPEED;
+    float error = f_left - f_right;
+    error = std::max(-0.5f, std::min(0.5f, error));
+    vel.angular.z = error * KP;
+  }
+  pose_pub_->publish(vel);
 }
 
 float SelfDrive::get_range_avg(const sensor_msgs::msg::LaserScan::SharedPtr scan, int center_angle, int window)
